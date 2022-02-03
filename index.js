@@ -1,14 +1,29 @@
+require("dotenv").config();
 const PORT = 3000;
 const express = require("express");
 const morgan = require("morgan");
 const app = express();
 const { append } = require("express/lib/response");
 const server = express();
+const jwt = require("jsonwebtoken");
+
+const token = jwt.sign({ id: 3, username: "joshua" }, "server secret", {
+  expiresIn: "1h",
+});
+
+token;
+
+const recoveredData = jwt.verify(token, "server secret");
+
+recoveredData;
+
+//wait 1 hour:
+jwt.verify(token, "server secret");
 
 server.use(morgan("dev")); //logs out the incoming requests
 server.use(express.json()); //read incoming JSON from requests
 
-const {client} = require('./db');
+const { client } = require("./db");
 client.connect();
 
 server.listen(PORT, () => {
