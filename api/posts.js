@@ -2,7 +2,7 @@
 const express = require("express");
 const postsRouter = express.Router();
 const { requireUser } = require("./utils");
-const { createPost, getPostById, updatePost } = require("../db");
+const { createPost, getPostById, updatePost, getAllPosts } = require("../db");
 
 postsRouter.post("/", requireUser, async (req, res, next) => {
   const { title, content, tags = "" } = req.body;
@@ -66,20 +66,52 @@ postsRouter.patch("/:postId", requireUser, async (req, res, next) => {
   }
 });
 
+postsRouter.delete("/:postId", requireUser, async (req, res, next) => {
+  try {
+    const post = await getPostById(req.params.postId);
+
+    if (post && post.author.id === req.user.id) {
+      const updatedPost = await updatePost(post.id, { active: false });
+
+      res.send({ post: updatedPost });
+    } else {
+      // if there was a post, throw unauthorizedUserError, otherwise throw PostNotFoundError
+      next(
+        post
+          ? {
+              name: "UnauthorizedUserError",
+              message: "You cannot delete a post which is not yours",
+            }
+          : {
+              name: "PostNotFoundError",
+              message: "That post does not exist",
+            }
+      );
+    }
+  } catch ({ name, message }) {
+    next({ name, message });
+  }
+});
+
 postsRouter.use((req, res, next) => {
   console.log("A request is being made to /posts");
 
   next();
 });
 
-const { getAllPosts } = require("../db");
-
-postsRouter.get("/", async (req, res) => {
-  const posts = await getAllPosts();
-
-  res.send({
-    posts,
-  });
+postsRouter.get("/", async (req, res, next) => {
+  try {
+    const allPosts = await getAllPosts();
+    const posts = allPosts.filter((post) => {
+      // keep a post if it is either active, or if it belongs to the current user
+      return post.active || (req.user && post.author.id === req.user.id);
+    });
+    res.send({
+      posts,
+    });
+  } catch ({ name, message }) {
+    next({ name, message });
+  }
 });
 
 module.exports = postsRouter;

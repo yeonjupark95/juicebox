@@ -66,6 +66,7 @@ usersRouter.post("/register", async (req, res, next) => {
         message: "A user by that username already exists",
       });
     }
+    
     const user = await createUser({
       username,
       password,
